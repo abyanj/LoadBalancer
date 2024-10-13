@@ -1,0 +1,11 @@
+# Binaries
+/bin/
+/build/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE specific files
+.idea/
