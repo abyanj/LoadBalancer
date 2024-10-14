@@ -84,7 +84,7 @@ function App() {
                 <div className="flex items-center mt-2">
                   <span className={`inline-block w-4 h-4 rounded-full mr-2 ${status.Healthy ? 'bg-green-500' : 'bg-red-500'}`}></span>
                   <p className={status.Healthy ? 'text-green-400' : 'text-red-400'}>
-                    {status.Healthy ? 'Healthy' : 'Unhealthy'}
+                    {status.Healthy ? 'Online' : 'Offline'}
                   </p>
                 </div>
               </div>
