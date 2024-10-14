@@ -21,28 +21,29 @@ var backendServers = []*Server{
 }
 
 var currentIndex uint32
-var mu sync.RWMutex // Protects concurrent reads and writes to the backend server list
+var mu sync.RWMutex
 
-// getNextBackendServer returns the next healthy backend server in round-robin fashion
-func getNextBackendServer() *Server {
-	mu.RLock() // Acquire a read lock to safely access backendServers
+func getNextBackendServer() (*Server, string) {
+	mu.RLock()
 	defer mu.RUnlock()
+
+	var skippedServer string
 
 	for {
 		index := atomic.AddUint32(&currentIndex, 1)
 		server := backendServers[index%uint32(len(backendServers))]
 		if server.Healthy {
-			return server
+			return server, skippedServer
+		} else {
+			skippedServer = server.URL
 		}
 	}
 }
 
-// handleRequestAndRedirect forwards incoming requests to one of the backend servers
 func handleRequestAndRedirect(w http.ResponseWriter, r *http.Request) {
-	// Get the next healthy backend server to use
-	backendServer := getNextBackendServer()
-
-	// Forward the request to the chosen backend server
+	backendServer, skippedServer := getNextBackendServer()
+	timestamp := time.Now().Format(time.RFC3339)
+	broadcastUpdate(backendServer.URL, true, "request", timestamp, skippedServer)
 	resp, err := http.Get(backendServer.URL + r.URL.Path)
 	if err != nil {
 		log.Println("Error forwarding request:", err)
@@ -55,8 +56,6 @@ func handleRequestAndRedirect(w http.ResponseWriter, r *http.Request) {
 			log.Println("Error closing response body:", err)
 		}
 	}()
-
-	// Copy the backend server's response to the client
 	w.WriteHeader(resp.StatusCode)
 	if _, err := io.Copy(w, resp.Body); err != nil {
 		log.Println("Error copying response body:", err)
@@ -64,34 +63,34 @@ func handleRequestAndRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// healthCheckServer checks the health of a backend server
 func healthCheckServer(server *Server) {
-	resp, err := http.Get(server.URL + "/") // Replace "/" with a specific health check path if needed
-
-	// Acquire a write lock before modifying the health status
+	resp, err := http.Get(server.URL + "/")
 	mu.Lock()
 	defer mu.Unlock()
 
+	previousHealth := server.Healthy
 	if err != nil || resp.StatusCode != http.StatusOK {
 		server.Healthy = false
 		log.Printf("Server %s is unhealthy\n", server.URL)
-		return
+	} else {
+		server.Healthy = true
+		log.Printf("Server %s is healthy\n", server.URL)
 	}
 
-	server.Healthy = true
-	log.Printf("Server %s is healthy\n", server.URL)
+	if server.Healthy != previousHealth {
+		broadcastUpdate(server.URL, server.Healthy, "status", "", "")
+	}
 }
 
-// healthCheck periodically checks the health of all backend servers
 func healthCheck() {
 	for {
 		for _, server := range backendServers {
-			go healthCheckServer(server) // Run health check in a separate goroutine for each server
+			go healthCheckServer(server)
 		}
-		time.Sleep(10 * time.Second) // Wait for 10 seconds before checking again
+		time.Sleep(10 * time.Second)
 	}
 }
 
 func init() {
-	go healthCheck() // Start the health check goroutine when the server starts
+	go healthCheck()
 }
