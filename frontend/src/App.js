@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FaServer } from 'react-icons/fa';
+import { FaServer, FaPlay } from 'react-icons/fa'; 
 
 function App() {
   const [serverStatus, setServerStatus] = useState([]);
-  const [requestLog, setRequestLog] = useState([]); // updated to log
+  const [requestLog, setRequestLog] = useState([]); 
 
   useEffect(() => {
     let ws;
@@ -20,7 +20,6 @@ function App() {
         const update = JSON.parse(event.data);
 
         if (update.MessageType === "status") {
-          
           setServerStatus((prevStatus) => {
             const index = prevStatus.findIndex(s => s.Server === update.Server);
             if (index === -1) {
@@ -32,7 +31,7 @@ function App() {
             }
           });
         } else if (update.MessageType === "request") {
-          // no duplicate
+          // No duplicate
           setRequestLog((prevLog) => {
             if (prevLog.find((log) => log.Timestamp === update.Timestamp)) {
               return prevLog; 
@@ -62,6 +61,23 @@ function App() {
     };
   }, []);
 
+  
+  const startServer = async (serverUrl) => {
+    const serverPort = serverUrl.split(":")[2]; 
+    try {
+      const response = await fetch(`http://localhost:8080/start-server?server=${serverPort}`, {
+        method: 'GET',
+      });
+      if (response.ok) {
+        console.log(`Server ${serverPort} started successfully`);
+      } else {
+        console.error(`Failed to start server ${serverPort}`);
+      }
+    } catch (error) {
+      console.error(`Error starting server ${serverPort}:`, error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-100 p-6">
       <header className="text-center mb-8">
@@ -88,6 +104,15 @@ function App() {
                   </p>
                 </div>
               </div>
+              {/* Play button to start the server if it's offline */}
+              {!status.Healthy && (
+                <button
+                  onClick={() => startServer(status.Server)}
+                  className="ml-auto text-green-400"
+                >
+                  <FaPlay className="text-2xl" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -107,7 +132,7 @@ function App() {
               >
                 <h3 className="text-lg font-semibold text-blue-400">{`Request forwarded to: ${request.Server}`}</h3>
                 {request.Skipped && (
-                  <p className="text-md text-yellow-400">{`Skipped unhealthy server: ${request.Skipped}`}</p>
+                  <p className="text-md text-yellow-400">{`Skipped unhealthy servers: ${request.Skipped}`}</p>
                 )}
                 <p className="text-sm text-gray-400">{`Timestamp: ${request.Timestamp}`}</p>
               </div>
