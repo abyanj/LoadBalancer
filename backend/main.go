@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type ServerUpdate struct {
@@ -118,7 +119,11 @@ func broadcastUpdate(serverURL string, healthy bool, messageType, timestamp, ski
 func main() {
 	port := ":8080"
 	http.HandleFunc("/", handleRequestAndRedirect)
+
 	http.HandleFunc("/ws", handleWebSocketConnections)
+
+	http.HandleFunc("/start-server", startServerHandler)
+
 	fmt.Println("Starting load balancer with WebSocket on port", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
