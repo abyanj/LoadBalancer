@@ -2,6 +2,7 @@
 
 A simple **application-layer (Layer 7) HTTP load balancer** built using **Golang**. It distributes incoming traffic across multiple backend servers, ensuring **efficient load distribution, high availability, and automatic health checks**. The project also includes a **real-time monitoring dashboard** built with **React.js & WebSockets**, providing live updates on request routing and server health.
 
+![Alt text](/loadbalancer.png "Load Balancer")
 ---
 
 ## 🚀 Features
